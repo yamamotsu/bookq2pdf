@@ -1,6 +1,6 @@
 const elem = document.createElement("a")
 elem.addEventListener("click", getAllSlide)
-elem.textContent = "OPEN PDF"
+elem.textContent = "Download PDF"
 
 function getCurrentPageNum() {
     const pageNumberText = document.getElementById("pageNumberText").textContent
@@ -37,22 +37,25 @@ async function sha256(text){
 async function getCanvasDataWithHash(canvas){
     const image = canvas.toDataURL("image/png")
     const hash = await sha256(image)
-    return [image, hash]
+    return {
+        image: image,
+        hash: hash
+    }
 }
 
-async function waitCanvasChangeAsync(canvas, timeout=5000){
-    const old = await getCanvasDataWithHash(canvas)[1]
+async function waitCanvasChangeAsync(canvas, oldHash, timeout=5000){
+    // const old = await getCanvasDataWithHash(canvas)[1]
     // console.log(old)
     return new Promise((resolve, reject) => {
         let id = setInterval(async () => {
             const datahash = await getCanvasDataWithHash(canvas)
-            if(datahash[1] !== old){
-                resolve(datahash[0])
+            if(datahash.hash !== oldHash){
+                resolve(datahash)
                 console.log("image changed")
                 clearInterval(id)
                 id = null
             }
-        }, 100)
+        }, 250)
         setTimeout(()=>{
             if(id){
                 clearInterval(id)
@@ -121,17 +124,24 @@ async function getAllSlide(){
 
     console.log('width', canvas.width, 'height', canvas.height)
 
+    let oldHash = ""
     for(let i = 0; i < pageCount; i++){
-        await waitPageChangeAsync(i+1)
-        const url = await waitCanvasChangeAsync(canvas, 20000)
-        // console.log(url)
+        // await waitPageChangeAsync(i+1)
+        const dataHash = await waitCanvasChangeAsync(canvas, oldHash, 20000)
+        if(!dataHash) {
+            console.error("Canvas loading timeout.")
+            return
+        }
+        // const url = dataHash.image
+        oldHash = dataHash.hash
 
         allImageData.push({
-            image: url,
+            image: dataHash.image,
             width: canvas.width,
             height: canvas.height,
         })
         // console.log("got page image")
+
         next.children[0].click()
     }
     console.log("OK")
@@ -147,13 +157,14 @@ async function getAllSlide(){
     }
 
     // const pdfMake =  require('pdfmake/build/pdfmake.js')
-    elem.textContent = "OPEN PDF"
+    elem.textContent = "Download PDF"
     next.style.display = "block"
     prev.style.display = "block"
     slider.style.display = "block"
 
-    pdfMake.createPdf(doc).open()
-    // return allImageData
+    const now = new Date(Date.now())
+    const filename = "bookq_"+now.toLocaleDateString()+".pdf"
+    pdfMake.createPdf(doc).download(filename)
 }
 
 window.onload = () => {
