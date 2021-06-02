@@ -1,0 +1,19 @@
+{
+    "manifest_version": 2,
+    "name": "bookq2pdf",
+    "description": "BookQをPDFに変換(BookRoll非対応)",
+    "version": "0.1.0",
+    "content_scripts": [
+        {
+            "matches": ["http://bookq.s.kyushu-u.ac.jp/book/*", "https://bookq.s.kyushu-u.ac.jp/book/*" ],
+            "js": [
+                "libs/pdfmake.min.js",
+                "src/content.js"
+            ]
+        }
+    ],
+    "permissions": [
+        "http://*/*",
+        "https://*/*"
+    ]
+}
